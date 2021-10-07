@@ -1,0 +1,76 @@
+#Package install
+remotes::install_github("kiernann/fflr")
+library(fflr)
+packageVersion("fflr")
+#> [1] '1.9.2.9000'
+
+##2021 scores
+current_year_scores<-tidy_scores(leagueId=197350)
+#league history scores
+league_scores_past<-tidy_scores(leagueId=197350,leagueHistory = TRUE)
+##Final
+all_scores<- union(do.call(rbind,league_scores_past),current_year_scores) %>% 
+data_frame() %>%
+drop_na()
+
+
+#2021 draft
+current_year_draft<-draft_recap(leagueId=197350)
+#league draft history
+league_draft_past<-draft_recap(leagueId=197350,leagueHistory = TRUE)
+
+do.call(rbind,league_draft_past[c(1,2,3)]) %>%
+data_frame()%>% select(-10)%>%
+  union(league_draft_past[c(1,2,3)],league_draft_past[c(4,5)]) %>% 
+  data_frame()
+#Final (WIP)
+all_drafts<- union(do.call(rbind,league_draft_past),current_year_draft)%>%
+data_frame()
+
+#2021 standings (have to remove playoff_pct and division win %)
+current_year_standings<-league_standings(leagueId=197350)[-c(18,19)]
+#league standings history
+league_standings_past<-league_standings(leagueId=197350,leagueHistory = TRUE)
+#Final
+all_standings<-union(do.call(rbind,league_standings_past),current_year_standings) %>%
+  data_frame()
+
+#2021 match-ups
+current_year_matchups<-tidy_matchups(leagueId = 197350)
+#league match-up history
+league_matchups_past<- tidy_matchups(leagueId = 197350,leagueHistory = TRUE)
+#Final
+all_matchups<-union(do.call(rbind,league_matchups_past),current_year_matchups) %>%
+  data_frame() %>%
+  drop_na()
+
+#2021 teams
+current_year_teams<- league_teams(leagueId = 197350)%>%
+  mutate(year=2021)
+#league teams history
+league_teams_past<- league_teams(leagueId = 197350,leagueHistory = TRUE)
+years<-c(2016,2017,2018,2019,2020) #variable
+league_teams_history<-do.call(rbind,league_teams_past) %>%
+mutate(year=rep(years,each=12))
+#Final (Works but figure out how to add years to DFs)
+all_teams<-union(league_teams_history,current_year_teams)%>%
+data_frame()
+
+#Players
+players<- all_players(leagueId=197350,limit=1000)%>%
+data_frame()
+
+#Export File
+workbook<-createWorkbook()
+addWorksheet(workbook,sheetName="Matchups")
+addWorksheet(workbook,sheetName="Scores")
+addWorksheet(workbook,sheetName="Standings")
+addWorksheet(workbook,sheetName="Teams")
+addWorksheet(workbook,sheetName="Players")
+writeData(workbook,"Matchups",all_matchups)
+writeData(workbook, "Scores",all_scores)
+writeData(workbook, "Standings",all_standings)
+writeData(workbook,"Teams",all_teams)
+writeData(workbook,"Players",players)
+saveWorkbook(workbook,file="Fantasy_File.xlsx",overwrite = TRUE)
+
